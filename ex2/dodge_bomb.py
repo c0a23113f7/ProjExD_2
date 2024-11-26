@@ -80,7 +80,7 @@ def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
     """
     爆弾のサイズと加速度リストを生成する関数
 
-    Returns:
+    リターン:
         tuple[list[pg.Surface], list[int]]:
         - サイズの異なる爆弾Surfaceを格納したリスト
         - 加速度リスト（1～10の整数）
@@ -94,6 +94,33 @@ def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
         bb_imgs.append(bb_img)  # リストに追加
 
     return bb_imgs, bb_accs
+
+
+def get_kk_img(sum_mv: tuple[int, int]) -> pg.Surface:
+    """
+    移動量の合計値タプルに対応する向きの画像Surfaceを返す
+
+    引数:
+        sum_mv (tuple[int, int]): 移動量の合計値タプル
+
+    リターン:
+        pg.Surface: 指定方向のこうかとん画像Surface
+    """
+    # 向きに応じた画像を事前に準備
+    kk_imgs = {
+        (0, 0): pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9),      # 静止時
+        (+5, 0): pg.transform.flip((pg.image.load("fig/3.png")),True, False),     # 右
+        (-5, 0): pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9),   # 左
+        (0, -5): pg.transform.rotozoom(pg.image.load("fig/3.png"), -90, 0.9),    # 上
+        (0, +5): pg.transform.rotozoom(pg.image.load("fig/3.png"), 90, 0.9),   # 下
+        (+5, -5): pg.transform.flip(pg.transform.rotozoom(pg.image.load("fig/3.png"), 135, 0.9),False, True) ,  # 右上
+        (+5, +5): pg.transform.flip(pg.transform.rotozoom(pg.image.load("fig/3.png"), -135, 0.9), False, True), # 右下
+        (-5, -5): pg.transform.rotozoom(pg.image.load("fig/3.png"), -45, 0.9),  # 左上
+        (-5, +5): pg.transform.rotozoom(pg.image.load("fig/3.png"), 45, 0.9)  # 左下
+    }
+
+    # 移動量タプルが辞書に存在する場合、その向きの画像を返す
+    return kk_imgs.get(sum_mv, kk_imgs[(0, 0)])  # デフォルトは静止時
 
 
 def main():
@@ -129,6 +156,7 @@ def main():
             if key_lst[key]:
                 sum_mv[0] += tpl[0]
                 sum_mv[1] += tpl[1]
+        kk_img = get_kk_img(tuple(sum_mv))  
         kk_rct.move_ip(sum_mv)
         if check_bound(kk_rct) != (True, True):  # 画面外判定
             kk_rct.move_ip(-sum_mv[0], -sum_mv[1])
