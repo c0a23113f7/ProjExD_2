@@ -28,7 +28,7 @@ def check_bound(rct: pg.Rect) -> tuple[bool, bool]:
     return yoko, tate
 
 
-def show_game_over(screen, kk_img, font):
+def gameover(screen, kk_img, font):
     """ゲームオーバー画面を表示する"""
     # 画面をブラックアウト
     overlay = pg.Surface((WIDTH, HEIGHT))
@@ -56,20 +56,57 @@ def show_game_over(screen, kk_img, font):
     # 5秒間停止
     time.sleep(5)
 
+def init_bb_img() -> tuple[list[pg.Surface], list[int]]:
+    """
+    爆弾のサイズと加速度リストを生成する関数
+
+    リターン:
+        tuple[list[pg.Surface], list[int]]:
+        - サイズの異なる爆弾Surfaceを格納したリスト
+        - 加速度リスト（1～10の整数）
+    """
+    bb_imgs = []  # 爆弾Surfaceのリスト
+    bb_accs = [a for a in range(1, 11)]  # 加速度リスト（1～10）
+
+    for r in range(1, 11):  # 半径倍率 r: 1～10
+        bb_img = pg.Surface((20 * r, 20 * r), pg.SRCALPHA)  # 爆弾の大きさ
+        pg.draw.circle(bb_img, (255, 0, 0), (10 * r, 10 * r), 10 * r)  # 爆弾の円を描画
+        bb_imgs.append(bb_img)  # リストに追加
+
+    return bb_imgs, bb_accs
+
+
+def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
+    """
+    爆弾のサイズと加速度リストを生成する関数
+
+    Returns:
+        tuple[list[pg.Surface], list[int]]:
+        - サイズの異なる爆弾Surfaceを格納したリスト
+        - 加速度リスト（1～10の整数）
+    """
+    bb_imgs = []  # 爆弾Surfaceのリスト
+    bb_accs = [a for a in range(1, 11)]  # 加速度リスト（1～10）
+
+    for r in range(1, 11):  # 半径倍率 r: 1～10
+        bb_img = pg.Surface((20 * r, 20 * r), pg.SRCALPHA)  # 爆弾の大きさ
+        pg.draw.circle(bb_img, (255, 0, 0), (10 * r, 10 * r), 10 * r)  # 爆弾の円を描画
+        bb_imgs.append(bb_img)  # リストに追加
+
+    return bb_imgs, bb_accs
+
 
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load("fig/pg_bg.jpg")
-    kk_img = pg.transform.rotozoom(pg.image.load("fig/8.png"), 0, 0.9)
+    kk_img = pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9)
     kk_rct = kk_img.get_rect()
     kk_rct.center = 300, 200
-    bb_img = pg.Surface((20, 20))  # 爆弾用の空surface
-    pg.draw.circle(bb_img, (255, 0, 0), (10, 10), 10)  # 爆弾円を描く
-    bb_img.set_colorkey((0, 0, 0))  # 黒色を透明化
-    bb_rct = bb_img.get_rect()  # 爆弾のrectの抽出
-    bb_rct.center = random.randint(0, WIDTH), random.randint(0, HEIGHT)  # 爆弾の初期位置
-    vx, vy = +5, +5  # 爆弾の速度ベクトル
+    bb_imgs, bb_accs = init_bb_imgs()  # 爆弾画像リストと加速度リストを初期化
+    bb_rct = bb_imgs[0].get_rect()  # 最初の爆弾サイズのRectを取得
+    bb_rct.center = random.randint(0, WIDTH), random.randint(0, HEIGHT)
+    vx, vy = +5, +5  # 爆弾の基本速度
     clock = pg.time.Clock()
     tmr = 0
     font = pg.font.Font(None, 80)  # ゲームオーバー用フォント
@@ -78,12 +115,14 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
+            
         if kk_rct.colliderect(bb_rct):
-            show_game_over(screen, kk_img, font)
+            gameover(screen, kk_img, font)
             return  # ゲームオーバー
-
+        
         screen.blit(bg_img, [0, 0])
 
+        # キー入力の処理
         key_lst = pg.key.get_pressed()
         sum_mv = [0, 0]
         for key, tpl in DELTA.items():
@@ -91,18 +130,24 @@ def main():
                 sum_mv[0] += tpl[0]
                 sum_mv[1] += tpl[1]
         kk_rct.move_ip(sum_mv)
-        # こうかとんが画面外なら、元の場所に戻す
-        if check_bound(kk_rct) != (True, True):
+        if check_bound(kk_rct) != (True, True):  # 画面外判定
             kk_rct.move_ip(-sum_mv[0], -sum_mv[1])
         screen.blit(kk_img, kk_rct)
 
-        bb_rct.move_ip(vx, vy)
+        # 爆弾の拡大と加速
+        idx = min(tmr // 500, 9)  # タイマーに応じてインデックス選択（最大9）
+        avx, avy = vx * bb_accs[idx], vy * bb_accs[idx]  # 加速
+        bb_img = bb_imgs[idx]  # サイズ変更
+        bb_rct = bb_img.get_rect(center=bb_rct.center)  # 中心位置を維持
+
+        bb_rct.move_ip(avx, avy)
         yoko, tate = check_bound(bb_rct)
         if not yoko:
             vx *= -1
         if not tate:
             vy *= -1
         screen.blit(bb_img, bb_rct)
+
         pg.display.update()
         tmr += 1
         clock.tick(50)
