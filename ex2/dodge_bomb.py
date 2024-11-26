@@ -28,15 +28,16 @@ def check_bound(rct: pg.Rect) -> tuple[bool, bool]:
     return yoko, tate
 
 
-def gameover(screen, kk_img, font):
+def gameover(screen: pg.Surface) -> None:
     """ゲームオーバー画面を表示する"""
+    # 必要なリソースを関数内で初期化
+    font = pg.font.Font(None, 80)  # フォント
+    crying_kk_img = pg.transform.rotozoom(pg.image.load("fig/8.png"), 0, 0.9)
+
     # 画面をブラックアウト
     overlay = pg.Surface((WIDTH, HEIGHT))
     overlay.fill((0, 0, 0))
     overlay.set_alpha(150)  # 半透明
-
-    # 泣いているこうかとんの画像
-    crying_kk_img = pg.transform.rotozoom(pg.image.load("fig/8.png"), 0, 0.9)
 
     # ゲームオーバー文字
     text = font.render("Game Over", True, (255, 255, 255))
@@ -144,7 +145,7 @@ def main():
                 return
             
         if kk_rct.colliderect(bb_rct):
-            gameover(screen, kk_img, font)
+            gameover(screen)
             return  # ゲームオーバー
         
         screen.blit(bg_img, [0, 0])
